@@ -1,1 +1,1 @@
-# OpenCGRA
+# CGRA
