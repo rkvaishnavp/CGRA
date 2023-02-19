@@ -1,71 +1,111 @@
-/*"""
-6 Instructions can be Sent to a tile
-    0. Operation(ALU)
-    1. Load  - Reg
-    2.         Memory
-    3. Store - Reg
-    4.         Memory
-    5. Tile  - Send
-    6.         Recieve
-"""
+/*
 
-"""
-2bit Direction of Tiles
-N - 00
-S - 01
-E - 10
-W - 11
-"""
+Instructions
+    1. Alu Operation
 
-"""
-Instruction Format
+    2. send data from reg to other tile
+    3. send data from reg to output
+    4. send data from reg to data memory
 
-64 Bit Instructions
+    5. recv data from other tile to reg
+    6. recv data from data memory to reg
+    7. recv data from instruction to reg
 
-63:32 --> Data
-31:25 --> Dummy
-24:20 --> Source Register 2
-19:15 --> Source Register 1
-14:12 --> ALU Function
-11:7  --> Destination Register
-6:0   --> Opcode
+Instruction encoding
 
-24:7  --> ALU Specific
+[2:0]   -   Opcode
+    000 -   ALU
+    001 -   send data from reg to other tile
+    010 -   send data from reg to output
+    011 -   send data from reg to data memory
+    100 -   recv data from other tile to reg
+    101 -   recv data from data memory to reg
+    110 -   recv data from instruction to reg
+    111 -   no operation
 
+[5:3]   -   Destination Register
 
-"""
+[8:6]   -   Source 1
+[11:9]  -   Source 2
+
+[14:12] -   Direction Bit
+    N   -   000
+    NE  -   001
+    E   -   010
+    SE  -   011
+    S   -   100
+    SW  -   101
+    W   -   110
+    NW  -   111
+
+[18:15] -   ALU Operation/Function
+    0000    -   Add
+    0001    -   Sub
+    0010    -   Mul
+    0011    -   Shift Left Logical
+    0100    -   Shift Right Logical
+    0101    -   Compare(in1<in2)
+    0110    -   Compare(in1>in2)
+    0111    -   Compare(in1==in2)
+    1000    -
+    1001    -
+    1010    -
+    1011    -
+    1100    -
+    1101    -
+    1110    -
+    1111    -
+
+[28:19] -   Destination Memory Address
+[60:29] -   Data
+[61:61] -   Reset Bit
+
 */
 module tile (
-    
-    input [63:0] instruction,
-    input rst;
-    input clk,
-    //Data Recieved from other tiles
-    input[31:0] recv_from_tile_data,
-    input[4:0] recv_from_tile_addr,
+input instruction[63:0],
+input rst;
+input clk,
 
-    //Data Sent to other tiles
-    output[31:0] send_to_tile_data,
-    output[31:0] send_to_tile_addr,
-    );
+//Data Recieved from Data Memory
+input recv_from_memory_data[31:0];
+input recv_from_memory_addr[4:0];
 
-    reg [31:0] register [31:0];
-    
-    alu alu1(
-        .in1(rs1),
-        .in2(rs2),
-        .instruction(instruction[14:12]),
-        .en(instruction[0]),
-        .out(ALUOUT)
-    );
+//Data Sent to Data Memory
+output send_to_memory_data[31:0];
+output send_to_memory_addr[9:0];
 
-    always @(posedge clk ) begin
-        if (!rst) begin
-            
-        end
-        else begin
-            
-        end
+//Data Recieved from other tiles
+input[2:0] recv_from_tile_data[31:0],
+input[2:0] recv_from_tile_addr[4:0],
+
+//Data Sent to other tiles
+output[2:0] send_to_tile_data[31:0],
+output[2:0] send_to_tile_addr[4:0],
+
+//Output from each tile to cgra_output
+output [31:0] final_output;
+);
+
+reg [31:0] registers [31:0];
+
+wire [31:0]ALUOUT;
+wire [31:0]source1data;
+wire [31:0]source2data;
+
+alu alu1(
+    .in1(source1data),
+    .in2(source2data),
+    .instruction(instruction[14:12]),
+    .en(instruction[0]),
+    .out(ALUOUT)
+);
+
+assign  source1data = registers[instruction[19:15]];
+assign  source2data = registers[instruction[24:20]];
+
+always @(posedge clk ) begin
+    if (!instruction[61]) begin
+        
     end
-
+end
 endmodule
