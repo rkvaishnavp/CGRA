@@ -28,7 +28,7 @@ Instruction encoding
 [8:6]   -   Source 1
 [11:9]  -   Source 2
 
-[14:12] -   Direction Bit
+[14:12] -   Direction Bits
     N   -   000
     NE  -   001
     E   -   010
