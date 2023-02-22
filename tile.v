@@ -47,9 +47,9 @@ Instruction encoding
     0101    -   Compare(in1<in2)
     0110    -   Compare(in1>in2)
     0111    -   Compare(in1==in2)
-    1000    -
-    1001    -
-    1010    -
+    1000    -   OR
+    1001    -   AND
+    1010    -   
     1011    -
     1100    -
     1101    -
@@ -69,72 +69,74 @@ input [31:0]in1;
 input [31:0]in2;
 input en;
 input [18:15]instruction;
-output [31:0] out;
+output reg [31:0] out;
 
-reg [31:0] ALUOUT;
-
-assign out = ALUOUT;
-
-always @(*) begin
+always@(*) begin
     if (en) begin
         case (instruction)
             4'b0000: begin
-                ALUOUT = in1 + in2;
+                out = in1 + in2;
             end
             4'b0001: begin
-                ALUOUT = in1 - in2;
+                out = in1 - in2;
             end
             4'b0010: begin
-                ALUOUT = in1[15:0] * in2[15:0];
+                out = in1[15:0] * in2[15:0];
             end
             4'b0011: begin
-                ALUOUT = in1 << in2;
+                out = in1 << in2;
             end
             4'b0100: begin
-                ALUOUT = in1 >> in2;
+                out = in1 >> in2;
             end
             4'b0101: begin
-                ALUOUT = (in1 < in2)?32'b1:32'b0;
+                out = (in1 < in2)?32'b1:32'b0;
             end
             4'b0110: begin
-                ALUOUT = (in1 > in2)?32'b1:32'b0;
+                out = (in1 > in2)?32'b1:32'b0;
             end
             4'b0111: begin
-                ALUOUT = (in1 == in2)?32'b1:32'b0;
+                out = (in1 == in2)?32'b1:32'b0;
+            end
+            4'b1000: begin
+                out = in1 | in2;
+            end
+            4'b1001: begin
+                out = in1 & in2;
             end
         endcase
     end
     else begin
-        ALUOUT = 32'b0;
+        out = 32'b0;
     end
 end
 endmodule
-
 module tile (
-input instruction[63:0],
-input rst;
+input [63:0]instruction,
+input rst,
 input clk,
 
 //Data Recieved from Data Memory
-input[31:0] recv_from_memory_data;
-input[2:0] recv_from_memory_addr;
+input[31:0] recv_from_memory_data,
+input[2:0] recv_from_memory_addr,
 
 //Data Sent to Data Memory
-output[31:0] send_to_memory_data;
-output[9:0] send_to_memory_addr;
+output reg [31:0] send_to_memory_data,
+output reg [9:0] send_to_memory_addr,
 
 //Data Recieved from other tiles
-input[31:0] recv_from_tile_data[2:0],
-input[2:0] recv_from_tile_addr[2:0],
+input[255:0] recv_from_tile_data,
+input[23:0] recv_from_tile_addr,
 
 //Data Sent to other tiles
-output[31:0] send_to_tile_data[2:0],
-output[2:0] send_to_tile_addr[2:0],
+output reg [255:0] send_to_tile_data,
+output reg [23:0] send_to_tile_addr,
 
 //Output from each tile to cgra_output
-output [31:0] final_output;
+output reg [31:0] final_output
 );
-parameter i = 0;
+integer i = 0;
+integer j = 0;
 parameter n = 8;
 
 reg [7:0] registers [31:0];
@@ -164,8 +166,40 @@ always @(posedge clk ) begin
             end
 
             3'b001: begin
-                send_to_tile_data[instruction[14:12]] = registers[instruction[8:6]];
-                send_to_tile_addr[instruction[14:12]] = instruction[5:3]
+                case (instruction[14:12])
+                    3'b000: begin
+                        send_to_tile_data[31:0] = registers[instruction[8:6]];
+                        send_to_tile_addr[2:0] = registers[instruction[8:6]];
+                    end
+                    3'b001: begin
+                        send_to_tile_data[63:32] = registers[instruction[8:6]];
+                        send_to_tile_addr[5:3] = registers[instruction[8:6]];
+                    end
+                    3'b010: begin
+                        send_to_tile_data[95:64] = registers[instruction[8:6]];
+                        send_to_tile_addr[8:6] = registers[instruction[8:6]];
+                    end
+                    3'b011: begin
+                        send_to_tile_data[127:96] = registers[instruction[8:6]];
+                        send_to_tile_addr[11:9] = registers[instruction[8:6]];
+                    end
+                    3'b100: begin
+                        send_to_tile_data[159:128] = registers[instruction[8:6]];
+                        send_to_tile_addr[14:12] = registers[instruction[8:6]];
+                    end
+                    3'b101: begin
+                        send_to_tile_data[191:160] = registers[instruction[8:6]];
+                        send_to_tile_addr[17:15] = registers[instruction[8:6]];
+                    end
+                    3'b110: begin
+                        send_to_tile_data[223:192] = registers[instruction[8:6]];
+                        send_to_tile_addr[20:18] = registers[instruction[8:6]];
+                    end
+                    3'b111: begin
+                        send_to_tile_data[255:224] = registers[instruction[8:6]];
+                        send_to_tile_addr[23:21] = registers[instruction[8:6]];
+                    end
+                endcase
             end
 
             3'b010: begin
@@ -178,7 +212,32 @@ always @(posedge clk ) begin
             end
 
             3'b100: begin
-                registers[recv_from_tile_addr] = recv_from_tile_data[instruction[14:12]];
+                case (instruction[14:12])
+                    3'b000: begin
+                        registers[recv_from_tile_addr] = recv_from_tile_data[31:0];
+                    end
+                    3'b001: begin
+                        registers[recv_from_tile_addr] = recv_from_tile_data[63:32];
+                    end
+                    3'b010: begin
+                        registers[recv_from_tile_addr] = recv_from_tile_data[95:64];
+                    end
+                    3'b011: begin
+                        registers[recv_from_tile_addr] = recv_from_tile_data[127:96];
+                    end
+                    3'b100: begin
+                        registers[recv_from_tile_addr] = recv_from_tile_data[159:128];
+                    end
+                    3'b101: begin
+                        registers[recv_from_tile_addr] = recv_from_tile_data[191:160];
+                    end
+                    3'b110: begin
+                        registers[recv_from_tile_addr] = recv_from_tile_data[223:192];
+                    end
+                    3'b111: begin
+                        registers[recv_from_tile_addr] = recv_from_tile_data[255:224];
+                    end
+                endcase
             end
 
             3'b101: begin
@@ -191,8 +250,8 @@ always @(posedge clk ) begin
             /*default:*/ 
         endcase
     end
-    elif begin
-        for(i, i<n, i++) begin
+    else begin
+        for(i=0 ; i<n; i=i+1 ) begin
             registers[i] = 32'b0;
         end
     end

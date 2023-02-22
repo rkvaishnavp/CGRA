@@ -25,43 +25,45 @@ input [31:0]in1;
 input [31:0]in2;
 input en;
 input [18:15]instruction;
-output [31:0] out;
+output reg [31:0] out;
 
-reg [31:0] ALUOUT;
-
-assign out = ALUOUT;
-
-always @(*) begin
+always begin
     if (en) begin
         case (instruction)
             4'b0000: begin
-                ALUOUT = in1 + in2;
+                out = in1 + in2;
             end
             4'b0001: begin
-                ALUOUT = in1 - in2;
+                out = in1 - in2;
             end
             4'b0010: begin
-                ALUOUT = in1[15:0] * in2[15:0];
+                out = in1[15:0] * in2[15:0];
             end
             4'b0011: begin
-                ALUOUT = in1 << in2;
+                out = in1 << in2;
             end
             4'b0100: begin
-                ALUOUT = in1 >> in2;
+                out = in1 >> in2;
             end
             4'b0101: begin
-                ALUOUT = (in1 < in2)?32'b1:32'b0;
+                out = (in1 < in2)?32'b1:32'b0;
             end
             4'b0110: begin
-                ALUOUT = (in1 > in2)?32'b1:32'b0;
+                out = (in1 > in2)?32'b1:32'b0;
             end
             4'b0111: begin
-                ALUOUT = (in1 == in2)?32'b1:32'b0;
+                out = (in1 == in2)?32'b1:32'b0;
+            end
+            4'b1000: begin
+                out = in1 | in2;
+            end
+            4'b1001: begin
+                out = in1 & in2;
             end
         endcase
     end
     else begin
-        ALUOUT = 32'b0;
+        out = 32'b0;
     end
 end
 endmodule
