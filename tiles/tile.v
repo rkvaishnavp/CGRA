@@ -61,6 +61,7 @@ Instruction encoding
 [61:61] -   Reset Bit
 
 */
+`include "../alu/alu.v"
 module tile (
 input [63:0]instruction,
 input rst,
