@@ -61,56 +61,6 @@ Instruction encoding
 [61:61] -   Reset Bit
 
 */
-module alu (
-    in1, in2, en, instruction, out
-);
-
-input [31:0]in1;
-input [31:0]in2;
-input en;
-input [18:15]instruction;
-output reg [31:0] out;
-
-always@(*) begin
-    if (en) begin
-        case (instruction)
-            4'b0000: begin
-                out = in1 + in2;
-            end
-            4'b0001: begin
-                out = in1 - in2;
-            end
-            4'b0010: begin
-                out = in1[15:0] * in2[15:0];
-            end
-            4'b0011: begin
-                out = in1 << in2;
-            end
-            4'b0100: begin
-                out = in1 >> in2;
-            end
-            4'b0101: begin
-                out = (in1 < in2)?32'b1:32'b0;
-            end
-            4'b0110: begin
-                out = (in1 > in2)?32'b1:32'b0;
-            end
-            4'b0111: begin
-                out = (in1 == in2)?32'b1:32'b0;
-            end
-            4'b1000: begin
-                out = in1 | in2;
-            end
-            4'b1001: begin
-                out = in1 & in2;
-            end
-        endcase
-    end
-    else begin
-        out = 32'b0;
-    end
-end
-endmodule
 module tile (
 input [63:0]instruction,
 input rst,
