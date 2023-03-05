@@ -7,11 +7,11 @@ Types of Instruction: [2:0]
 5) recv from other tile         100
 6) nop                          101
 
-5 bit for source 1 [7:3]
-5 bit for source 2 [12:8]
-5 bit for Destination Register [17:13]
+5 bit for source 1 [6:3]
+5 bit for source 2 [10:7]
+5 bit for Destination Register [14:11]
 
-Direction Bit [20:18]
+Direction Bit [17:15]
     N   -   000
     NE  -   001
     E   -   010
@@ -22,16 +22,16 @@ Direction Bit [20:18]
     NW  -   111
     
 Interact with Data Memory:
-Address                     [29:21]
+Address                     [27:18]
 Tile Reg                    [34:30]
 
 TODO:
 Interact with other tile:
 Can only interact with 8 nhbrs
-5-bit Tile data reg address      [39:35]
+5-bit Tile data reg address      [38:35]
 
 DSP48E:
-Inputs: [44:40]
+Inputs: [43:39]
     input bits = 3 bit for sel, 2 for mode (may vary)
     A: The first input to the ALU. It can be a signed or unsigned value of up to 25 bits.
     B: The second input to the ALU. It can be a signed or unsigned value of up to 18 bits.
@@ -68,10 +68,14 @@ TODO:
 
 module tile(
 input [7:0] tile_id,
-input [63:0] instruction,
+input [63:0] instruction, // JTAG
 input reset,
 input clk,
 input program_mode,
+
+// input from data memory
+input [31:0] data_from_mem,
+input data_valid_from_mem,
 
 //Data Recieved from other tiles
 input[255:0] recv_from_tile_data,
@@ -90,10 +94,10 @@ output reg data_mem_valid,
 output reg [63:0] instruction_out
 );
 integer i = 0;
-parameter n = 32;
+parameter n = 8;
 parameter m = 8;
 // 32, 8 bit registers
-reg [7:0] registers [n-1:0];
+reg [31:0] registers [n-1:0];
 
 // 8, 64 bit instruction memory
 reg [63:0] instructions[m-1:0];
@@ -106,18 +110,17 @@ reg data_mem_rd_valid;
 // _ _ _ _ _ _ Z C
 reg [8:0] flag;
 reg [49:0] ALUOUT;
-wire [31:0] operand1 = registers[instruction[7:3]];
-wire [31:0] operand2 = registers[instruction[12:8]];
+wire [31:0] operand1 = registers[instruction[6:3]];
+wire [31:0] operand2 = registers[instruction[10:7]];
 wire alu_en = (instruction[2:0] == 3'b0) ? 1 : 0;
 
-initial begin
-    ip = 4'b0;
-end
+
 // In program mode, we fill the memory
 // In execution we execute so, we should set ip to 0
 // to start from first instruction
 always @(posedge program_mode or negedge program_mode)begin
     ip = 4'b0;
+    instruction_wrt = 1'b0;
 end
 
 // TODO: Call to DSP48E
@@ -136,58 +139,58 @@ always @(posedge clk) begin
     if(!program_mode && instructions[ip][63] != 'b0) begin
         case (instructions[ip] [2:0])
             3'b000 : 
-                registers[instructions[ip][17:13]] = ALUOUT;
+                registers[instructions[ip][14:11]] = ALUOUT;
             3'b001: begin
             // Send data to data Memory
                 data_mem_cntrl = 1'b1;
                 data_mem_valid = 1'b1;
-                data_mem_wrt_addr = instructions[ip][29:21];
-                data_mem_wrt_data = registers[instructions[ip][34:30]];
+                data_mem_wrt_addr = instructions[ip][27:18];
+                data_mem_wrt_data = registers[instructions[ip][31:28]];
             end
             3'b010: begin
                 data_mem_cntrl = 1'b0;
-                data_mem_rd_addr = instructions[ip][29:21];
-                // TODO: get data from data memory
-                // not every tile can do this
+                data_mem_rd_addr = instructions[ip][27:18];
+                registers[instructions[ip][31:28]] = data_from_mem;
+                data_mem_rd_valid = data_valid_from_mem;
             end
             3'b011: begin
-                case (instructions[ip][20:18])
+                case (instructions[ip][17:15])
                     3'b000: begin
-                        send_to_tile_data[31:0] = registers[instructions[ip][39:35]];
-                        send_to_tile_addr[2:0] = registers[instructions[ip][20:18]];
+                        send_to_tile_data[31:0] = registers[instructions[ip][38:35]];
+                        send_to_tile_addr[2:0] = registers[instructions[ip][17:15]];
                     end
                     3'b001: begin
-                        send_to_tile_data[63:32] = registers[instructions[ip][39:35]];
-                        send_to_tile_addr[5:3] = registers[instructions[ip][20:18]];
+                        send_to_tile_data[63:32] = registers[instructions[ip][38:35]];
+                        send_to_tile_addr[6:3] = registers[instructions[ip][17:15]];
                     end
                     3'b010: begin
-                        send_to_tile_data[95:64] = registers[instructions[ip][39:35]];
-                        send_to_tile_addr[8:6] = registers[instructions[ip][20:18]];
+                        send_to_tile_data[95:64] = registers[instructions[ip][38:35]];
+                        send_to_tile_addr[8:6] = registers[instructions[ip][17:15]];
                     end
                     3'b011: begin
-                        send_to_tile_data[127:96] = registers[instructions[ip][39:35]];
-                        send_to_tile_addr[11:9] = registers[instructions[ip][20:18]];
+                        send_to_tile_data[127:96] = registers[instructions[ip][38:35]];
+                        send_to_tile_addr[11:9] = registers[instructions[ip][17:15]];
                     end
                     3'b100: begin
-                        send_to_tile_data[159:128] = registers[instructions[ip][39:35]];
-                        send_to_tile_addr[14:12] = registers[instructions[ip][20:18]];
+                        send_to_tile_data[159:128] = registers[instructions[ip][38:35]];
+                        send_to_tile_addr[14:12] = registers[instructions[ip][17:15]];
                     end
                     3'b101: begin
-                        send_to_tile_data[191:160] = registers[instructions[ip][39:35]];
-                        send_to_tile_addr[17:15] = registers[instructions[ip][20:18]];
+                        send_to_tile_data[191:160] = registers[instructions[ip][38:35]];
+                        send_to_tile_addr[17:15] = registers[instructions[ip][17:15]];
                     end
                     3'b110: begin
-                        send_to_tile_data[223:192] = registers[instructions[ip][39:35]];
-                        send_to_tile_addr[20:18] = registers[instructions[ip][20:18]];
+                        send_to_tile_data[223:192] = registers[instructions[ip][38:35]];
+                        send_to_tile_addr[20:18] = registers[instructions[ip][17:15]];
                     end
                     3'b111: begin
-                        send_to_tile_data[255:224] = registers[instructions[ip][39:35]];
-                        send_to_tile_addr[23:21] = registers[instructions[ip][20:18]];
+                        send_to_tile_data[255:224] = registers[instructions[ip][38:35]];
+                        send_to_tile_addr[23:21] = registers[instructions[ip][17:15]];
                     end
                 endcase
             end
             3'b100: begin
-                case (instructions[ip][20:18])
+                case (instructions[ip][17:15])
                     3'b000: begin
                         registers[recv_from_tile_addr] = recv_from_tile_data[31:0];
                     end
@@ -220,7 +223,7 @@ always @(posedge clk) begin
     end
     else if(!program_mode) begin
         for(i = 0; i < n; i = i + 1) begin
-            registers[i] = 8'b0; 
+            registers[i] = 32'b0; 
         end
         for(i = 0; i < m; i = i + 1) begin
             instructions[i] = 64'b0;
