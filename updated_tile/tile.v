@@ -107,8 +107,6 @@ reg [31:0] registers [n-1:0];
 reg [63:0] instructions[m-1:0];
 reg [3:0] ip; // instruction pointer
 reg instruction_wrt;
-wire iw;
-assign iw = instruction_wrt;
 reg [7:0] data_mem_rd_addr;
 reg [31:0] data_mem_rd_data;
 reg data_mem_rd_valid;
@@ -226,7 +224,7 @@ Tile_Checker Chk1(
     .caller_id(tile_id),
     .test_id(instruction[62:55]),
     .clk(clk),
-    .wrt(iw)
+    .wrt(instruction_wrt)
 );
 
 
