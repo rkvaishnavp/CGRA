@@ -34,27 +34,10 @@ Can only interact with 8 nhbrs
 
 DSP48E:
 Inputs: ????? TODO Data bits for DSP48e will change'
-    // Will do as per datasheet
-    A: The first input to the ALU. It can be a signed or unsigned value of up to 25 bits.
-    B: The second input to the ALU. It can be a signed or unsigned value of up to 18 bits.
-    C: The carry-in input to the ALU. It can be a 1-bit value.
-    SEL: A 3-bit input that selects the ALU operation to be performed. The possible values are:
-    000: A*B
-    001: A+B
-    010: A-B
-    011: C+A*B
-    100: A and B bitwise AND
-    101: A or B bitwise OR
-    110: A xor B
-    111: not used
-    Outputs:
-    output bits = 50 bits
-    P: The output of the ALU. It can be a signed or unsigned value of up to 48 bits.
-    COUT: The carry-out output of the ALU. It can be a 1-bit value.
-    ZERO: A 1-bit output that indicates whether the output P is zero.
-    
-8-bit tile_id [62:55]
-1 bit Reset [63]
+    5bit INMODE [49:45]
+    7bit OPMODE [56:50]
+    4bit ALUMODE[60:57]
+    3bit CARRRYINSEL[63:61]
 
 in program_mode we feed the instruction to tile
 it calls a checker and if id matches instruction is written to the tile's instruction memory
@@ -69,6 +52,7 @@ TODO:
 
 
 module tile(
+input [7:0] target_id,
 input [7:0] tile_id,
 input [63:0] instruction, // JTAG
 input reset,
@@ -113,7 +97,12 @@ reg data_mem_rd_valid;
 
 // _ _ _ _ _ _ Z C
 reg [8:0] flag;
-reg [49:0] ALUOUT;
+reg [47:0] ALUOUT; // Assign to P
+reg [3:0] CARRYOUT;
+wire [4:0] INMODE = instruction[49:45];
+wire [6:0] OPMODE = instruction[56:50];
+wire [3:0] ALUMODE = instruction[60:57];
+wire [2:0] CARRRYINSEL = instruction[63:61];
 wire [31:0] operand1 = registers[instruction[6:3]]; // A
 wire [31:0] operand2 = registers[instruction[10:7]]; // B
 wire [31:0] operand3 = registers[instruction[14:11]]; // C
@@ -174,7 +163,7 @@ DSP48E1_inst (
   .UNDERFLOW(UNDERFLOW),           // 1-bit output: Underflow in add/acc output
   // Data: 4-bit (each) output: Data Ports
   .CARRYOUT(CARRYOUT),             // 4-bit output: Carry output
-  .P(P),                           // 48-bit output: Primary data output
+  .P(ALUOUT),                      // 48-bit output: Primary data output
   // Cascade: 30-bit (each) input: Cascade Ports
   .ACIN(ACIN),                     // 30-bit input: A cascade data input
   .BCIN(BCIN),                     // 18-bit input: B cascade input
@@ -222,14 +211,14 @@ DSP48E1_inst (
 
 Tile_Checker Chk1(
     .caller_id(tile_id),
-    .test_id(instruction[62:55]),
+    .test_id(target_id),
     .clk(clk),
     .wrt(instruction_wrt)
 );
 
 
 always @(posedge clk) begin
-    if(!program_mode && instructions[ip][63] != 'b0) begin
+    if(!program_mode && !reset) begin
         case (instructions[ip] [2:0])
             3'b000 : 
                 registers[instructions[ip][22:19]] = ALUOUT;
