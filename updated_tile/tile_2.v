@@ -324,8 +324,13 @@ always @(posedge clk ) begin
         end
     end
     else begin
-        insmemory = 0;
-        registers = 0;
+        ip = 0;
+        for(integer i = 0;i<64;i++) begin
+            insmemory[i] = 0;
+        end
+        for(integer j = 0;j<16;j++) begin
+            registers = 0;
+        end
     end
 end
 endmodule
