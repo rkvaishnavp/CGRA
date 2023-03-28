@@ -112,7 +112,7 @@ jtag #(
 
 reg [63:0]insmemory[0:5];
 reg [31:0]registers[0:3];
-reg [5:0]ip;
+    reg [5:0]ip = 0;
 
 // _ _ _ _ _ _ Z C
 reg [8:0] flag;
@@ -219,6 +219,7 @@ DSP48E1_inst (
 
 always @(posedge clk ) begin
     if(program_mode) begin
+        ip = 0;
         if(jtag_data_valid) begin
             insmemory[addr%64][addr/64] = jtag_memory;
             addr++;
