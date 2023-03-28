@@ -329,7 +329,7 @@ always @(posedge clk ) begin
             insmemory[i] = 0;
         end
         for(integer j = 0;j<16;j++) begin
-            registers = 0;
+            registers[j] = 0;
         end
     end
 end
