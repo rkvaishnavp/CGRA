@@ -112,7 +112,7 @@ jtag #(
 
 reg [63:0]insmemory[0:5];
 reg [31:0]registers[0:3];
-    reg [5:0]ip = 0;
+reg [5:0]ip = 0;
 
 // _ _ _ _ _ _ Z C
 reg [8:0] flag;
@@ -218,108 +218,114 @@ DSP48E1_inst (
 );
 
 always @(posedge clk ) begin
-    if(program_mode) begin
-        ip = 0;
-        if(jtag_data_valid) begin
-            insmemory[addr%64][addr/64] = jtag_memory;
-            addr++;
+    if(!rst) begin
+        if(program_mode) begin
+            ip = 0;
+            if(jtag_data_valid) begin
+                insmemory[addr%64][addr/64] = jtag_memory;
+                addr++;
+            end
+        end
+        else begin
+            addr = 0;
+            case (insmemory[ip][2:0])
+                3'b000 :
+                    INMODE = insmemory[ip][49:45];
+                    OPMODE = insmemory[ip][56:50];
+                    ALUMODE = insmemory[ip][60:57];
+                    CARRRYINSEL = insmemory[ip][63:61];
+                    operand1 = registers[insmemory[ip][6:3]];
+                    operand2 = registers[insmemory[ip][10:7]];
+                    operand3 = registers[insmemory[ip][14:11]];
+                    operand4 = registers[insmemory[ip][18:15]];
+                    alu_en = (insmemory[ip][2:0] == 3'b0) ? 1 : 0;
+                    registers[insmemory[ip][22:19]] = ALUOUT;
+
+                //send data to data memory
+                //recv data from data memory
+
+                //send data to another tile
+                3'b011: begin
+                    case (insmemory[ip][25:23])
+                        3'b000: begin
+                            send_to_tile_data[31:0] = registers[insmemory[ip][44:41]];
+                            send_to_tile_addr[2:0] = registers[insmemory[ip][25:23]];
+                        end
+                        3'b001: begin
+                            send_to_tile_data[63:32] = registers[insmemory[ip][44:41]];
+                            send_to_tile_addr[6:3] = registers[insmemory[ip][25:23]];
+                        end
+                        3'b010: begin
+                            send_to_tile_data[95:64] = registers[insmemory[ip][44:41]];
+                            send_to_tile_addr[8:6] = registers[insmemory[ip][25:23]];
+                        end
+                        3'b011: begin
+                            send_to_tile_data[127:96] = registers[insmemory[ip][44:41]];
+                            send_to_tile_addr[11:9] = registers[insmemory[ip][25:23]];
+                        end
+                        3'b100: begin
+                            send_to_tile_data[159:128] = registers[insmemory[ip][44:41]];
+                            send_to_tile_addr[14:12] = registers[insmemory[ip][25:23]];
+                        end
+                        3'b101: begin
+                            send_to_tile_data[191:160] = registers[insmemory[ip][44:41]];
+                            send_to_tile_addr[17:15] = registers[insmemory[ip][25:23]];
+                        end
+                        3'b110: begin
+                            send_to_tile_data[223:192] = registers[insmemory[ip][44:41]];
+                            send_to_tile_addr[20:18] = registers[insmemory[ip][25:23]];
+                        end
+                        3'b111: begin
+                            send_to_tile_data[255:224] = registers[insmemory[ip][44:41]];
+                            send_to_tile_addr[23:21] = registers[insmemory[ip][25:23]];
+                        end
+                    endcase
+                end
+
+                //recv from other tile
+                3'b100: begin
+                    case (insmemory[ip][25:23])
+                        3'b000: begin
+                            registers[recv_from_tile_addr] = recv_from_tile_data[31:0];
+                        end
+                        3'b001: begin
+                            registers[recv_from_tile_addr] = recv_from_tile_data[63:32];
+                        end
+                        3'b010: begin
+                            registers[recv_from_tile_addr] = recv_from_tile_data[95:64];
+                        end
+                        3'b011: begin
+                            registers[recv_from_tile_addr] = recv_from_tile_data[127:96];
+                        end
+                        3'b100: begin
+                            registers[recv_from_tile_addr] = recv_from_tile_data[159:128];
+                        end
+                        3'b101: begin
+                            registers[recv_from_tile_addr] = recv_from_tile_data[191:160];
+                        end
+                        3'b110: begin
+                            registers[recv_from_tile_addr] = recv_from_tile_data[223:192];
+                        end
+                        3'b111: begin
+                            registers[recv_from_tile_addr] = recv_from_tile_data[255:224];
+                        end
+                    endcase
+                end
+
+                3'b101: begin
+                    tile_output = registers[insmemory[ip][22:19]];
+                end
+
+                default: begin
+                    //NO Operation
+                end
+            endcase
+            ip++;
         end
     end
     else begin
-        addr = 0;
-        case (insmemory[ip][2:0])
-            3'b000 :
-                INMODE = insmemory[ip][49:45];
-                OPMODE = insmemory[ip][56:50];
-                ALUMODE = insmemory[ip][60:57];
-                CARRRYINSEL = insmemory[ip][63:61];
-                operand1 = registers[insmemory[ip][6:3]];
-                operand2 = registers[insmemory[ip][10:7]];
-                operand3 = registers[insmemory[ip][14:11]];
-                operand4 = registers[insmemory[ip][18:15]];
-                alu_en = (insmemory[ip][2:0] == 3'b0) ? 1 : 0;
-                registers[insmemory[ip][22:19]] = ALUOUT;
-            
-            //send data to data memory
-            //recv data from data memory
-
-            //send data to another tile
-            3'b011: begin
-                case (insmemory[ip][25:23])
-                    3'b000: begin
-                        send_to_tile_data[31:0] = registers[insmemory[ip][44:41]];
-                        send_to_tile_addr[2:0] = registers[insmemory[ip][25:23]];
-                    end
-                    3'b001: begin
-                        send_to_tile_data[63:32] = registers[insmemory[ip][44:41]];
-                        send_to_tile_addr[6:3] = registers[insmemory[ip][25:23]];
-                    end
-                    3'b010: begin
-                        send_to_tile_data[95:64] = registers[insmemory[ip][44:41]];
-                        send_to_tile_addr[8:6] = registers[insmemory[ip][25:23]];
-                    end
-                    3'b011: begin
-                        send_to_tile_data[127:96] = registers[insmemory[ip][44:41]];
-                        send_to_tile_addr[11:9] = registers[insmemory[ip][25:23]];
-                    end
-                    3'b100: begin
-                        send_to_tile_data[159:128] = registers[insmemory[ip][44:41]];
-                        send_to_tile_addr[14:12] = registers[insmemory[ip][25:23]];
-                    end
-                    3'b101: begin
-                        send_to_tile_data[191:160] = registers[insmemory[ip][44:41]];
-                        send_to_tile_addr[17:15] = registers[insmemory[ip][25:23]];
-                    end
-                    3'b110: begin
-                        send_to_tile_data[223:192] = registers[insmemory[ip][44:41]];
-                        send_to_tile_addr[20:18] = registers[insmemory[ip][25:23]];
-                    end
-                    3'b111: begin
-                        send_to_tile_data[255:224] = registers[insmemory[ip][44:41]];
-                        send_to_tile_addr[23:21] = registers[insmemory[ip][25:23]];
-                    end
-                endcase
-            end
-
-            //recv from other tile
-            3'b100: begin
-                case (insmemory[ip][25:23])
-                    3'b000: begin
-                        registers[recv_from_tile_addr] = recv_from_tile_data[31:0];
-                    end
-                    3'b001: begin
-                        registers[recv_from_tile_addr] = recv_from_tile_data[63:32];
-                    end
-                    3'b010: begin
-                        registers[recv_from_tile_addr] = recv_from_tile_data[95:64];
-                    end
-                    3'b011: begin
-                        registers[recv_from_tile_addr] = recv_from_tile_data[127:96];
-                    end
-                    3'b100: begin
-                        registers[recv_from_tile_addr] = recv_from_tile_data[159:128];
-                    end
-                    3'b101: begin
-                        registers[recv_from_tile_addr] = recv_from_tile_data[191:160];
-                    end
-                    3'b110: begin
-                        registers[recv_from_tile_addr] = recv_from_tile_data[223:192];
-                    end
-                    3'b111: begin
-                        registers[recv_from_tile_addr] = recv_from_tile_data[255:224];
-                    end
-                endcase
-            end
-
-            3'b101: begin
-                tile_output = registers[insmemory[ip][22:19]];
-            end
-
-            default: begin
-                //NO Operation
-            end
-        endcase
+        insmemory = 0;
+        registers = 0;
     end
 end
-
 endmodule
