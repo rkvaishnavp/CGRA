@@ -61,7 +61,7 @@ TODO:
         add DSP48E call
 
 */
-`include "../jtag/jtag2.v"
+`include "jtag2.v"
 
 module tile_2 #(tile_id = 0)(
     input rst,
@@ -215,6 +215,7 @@ DSP48E_custom alu(
     .C(operand3[47:0]),
     .D(operand4[24:0]),
     .CARRYIN(flag[0]),
+    .alu_en(alu_en),
     // control strings
     .ALUMODE(ALUMODE),
     .OPMODE(OPMODE),

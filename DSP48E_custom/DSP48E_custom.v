@@ -29,6 +29,7 @@ module DSP48E_custom
     input [47:0] C,
     input [24:0] D,
     input CARRYIN,
+    input alu_en,
     // control strings
     input [3:0] ALUMODE,
     input [6:0] OPMODE,
@@ -224,6 +225,9 @@ module DSP48E_custom
     // OUTPUT
     always @(posedge clk)
     begin
-        P <= P_OUT;
+        if(alu_en)
+            P <= P_OUT;
+        else
+            P <= 'b1;
     end
 endmodule
