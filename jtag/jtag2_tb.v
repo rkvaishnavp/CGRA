@@ -28,13 +28,15 @@ reg data_valid;
 wire memory;
 wire data_out;
 
-jtag2 jtag0(clk,data_in,rst,data_valid,memory,data_out);
+jtag2 # (.num_of_tiles(4),.tile_id(0),.mem_cycles(4096)) jtag0(clk,data_in,rst,data_valid,memory,data_out);
 reg [0:0]jtag[0:4095];
 integer i;
 
 always #1 clk = ~clk;
 initial begin
-    $readmemb("/home/rkvp/Desktop/Backup/Projects/HardWare/CGRA/jtag/jtag.txt",jtag);
+    $readmemb("/home/vaishnav/Desktop/BACKUP/Projects/HardWare/CGRA/jtag/jtag.txt",jtag);
+    $dumpfile("test.vcd");
+    $dumpvars(0,jtag0);
     rst = 0;
     clk = 1;
     data_valid = 1;
