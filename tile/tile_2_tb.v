@@ -21,46 +21,46 @@
 
 module tile_2_tb();
 
-
-
 reg rst;
 reg clk;
 reg jtag_data_in;
 reg program_mode;
-reg [255:0] recv_from_tile_data;
-reg [4:0] recv_from_tile_addr;
+reg [383:0] recv_from_tile_data;
 wire jtag_data_out;
-wire [255:0] send_to_tile_data;
-wire [23:0] send_to_tile_addr;
-wire [31:0] tile_output;
+wire [383:0] send_to_tile_data;
+wire [47:0] tile_output;
 
-reg [11:0]jtag[0:0];
-reg [11:0]addr;
+reg [63:0]jtag = 64'b00000001111xx001000000000000000001000011001000010000000;
+reg [12:0]addr;
 
-tile_2 tile0(
+tile_2 #(.tile_id(0)) tile0(
     .rst(rst),
     .clk(clk),
     .jtag_data_in(jtag_data_in),
     .jtag_data_out(jtag_data_out),
     .program_mode(program_mode),
-    .recv_from_tile_addr(recv_from_tile_addr),
     .recv_from_tile_data(recv_from_tile_data),
-    .send_to_tile_addr(send_to_tile_addr),
     .send_to_tile_data(send_to_tile_data),
     .tile_output(tile_output)
 );
 
 always #1 clk = ~clk;
-always begin jtag_data_in = jtag[addr];  #2 addr = addr + 1;  end
+integer i=0;
+
 initial begin
-    $monitor("clk=%b, data_in=%d, data_out=%d",clk,jtag_data_in,jtag_data_out);
     addr = 0;
-    $readmemb("jtag.bin",jtag);
     rst = 0;
-    clk = 0;
+    clk = 1;
     program_mode = 1;
-    repeat(5000) begin
-    #1;
+    repeat(64) begin
+        jtag_data_in = jtag[addr];
+        #2;
+        addr = addr + 1;
     end
+    program_mode = 0;
+    #10;
+    $finish;
 end
 endmodule
+
+
