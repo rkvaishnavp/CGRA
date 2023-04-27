@@ -1,23 +1,4 @@
 `timescale 10us / 10ns
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 03/29/2023 10:14:14 PM
-// Design Name: 
-// Module Name: tile_2_tb
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies:
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
 
 module jtag2_tb();
 
@@ -34,9 +15,7 @@ integer i;
 
 always #1 clk = ~clk;
 initial begin
-    $readmemb("/home/vaishnav/Desktop/BACKUP/Projects/HardWare/CGRA/jtag/jtag.txt",jtag);
-    $dumpfile("test.vcd");
-    $dumpvars(0,jtag0);
+    $readmemb("jtag.mem",jtag);
     rst = 0;
     clk = 1;
     data_valid = 1;

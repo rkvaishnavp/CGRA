@@ -41,11 +41,13 @@ size.
 In program_mode we feed the instruction to tile
 While sending data to other tile data is added and then 3 bits of direction
 
-
 */
+
+
 `include "../DSP48E_custom/DSP48E_custom.v"
 `include "../DSP48E_custom/multiplier.v"
 `include "../jtag/jtag2.v"
+
 module tile_2 #(tile_id = 0)(
     input rst,
     input clk,
@@ -68,9 +70,6 @@ module tile_2 #(tile_id = 0)(
 );
 
 wire jtag_memory;
-reg [11:0]addr=0;
-
-
 
 jtag2 #(.num_of_tiles(4),.tile_id(tile_id)) jtag
     (
@@ -114,14 +113,28 @@ DSP48E_custom alu(
     .INMODE(INMODE),
     .P(ALUOUT)
 );
+
 integer i, j;
+integer row = 0;
+integer element = 0;
+parameter mem_cycles = 4096;
+parameter clk_recv_min = (tile_id) + (tile_id)*mem_cycles;
+parameter clk_recv_max = clk_recv_min + mem_cycles;
+reg [20:0]clk_recv_count = 0;
+
 always @(posedge clk ) begin
     if(!rst) begin
-        if(program_mode) begin
+        if(program_mode && (clk_recv_count >= clk_recv_min && clk_recv_count <= clk_recv_max)) begin // ensure insmemory is written to only during clock_recv_count
             ip = 0;
-            insmemory[addr/64][addr%64] = jtag_memory;
-            addr = addr + 1;
+            insmemory[row][element] = jtag_memory;
+            if(element == 63) begin
+                row = row + 1;
+                element = 0;
+            end
+            else element = element + 1;
         end
+        clk_recv_count <= clk_recv_count + 1;
+        
         else begin
             addr = 0;
             case (insmemory[ip][2:0])
@@ -207,6 +220,7 @@ always @(posedge clk ) begin
             endcase
             ip = ip + 1;
         end
+        
     end
     else begin
         ip = 0;
